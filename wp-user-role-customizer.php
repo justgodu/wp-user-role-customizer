@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       WP User Role Customizer  
  * Description:       Create some custom roles for your wordpress website
- * Version:           0.0.1
+ * Version:           0.0.2
  * Requires at least: 5.2
  * Requires PHP:      7.2
  * Author:            Nika Goduadze
@@ -42,9 +42,9 @@ function wp_user_role_customizer_page(){
     <div class="wrap">
       <h1>'. esc_html( get_admin_page_title() ).'</h1>';
       
-      list_all_active_plugins();
-        
-    // list_all_menu_items();
+      wurc_plugin_page_role_creator();
+    //
+    //wurc_list_all_menu_items();
   
     echo '</div>';
     
@@ -59,11 +59,9 @@ define("ROLE_CAP_PREFIX", 'plugin_access_');
 
 
 
-// Lists all Currently Active Plugins in List
-function list_all_active_plugins(){
-    // $the_plugs = get_option('active_plugins');
-    
-    // print_r($the_plugs);
+// Creates from of creating new custom role
+function wurc_plugin_page_role_creator(){
+
     do_action('wurc_page_styles');
     if(isset($_GET['resp'])){
         
@@ -83,10 +81,9 @@ function list_all_active_plugins(){
     echo '<label class="" for="rolename">New role name: </label>';
     echo '<input class="role-name-input" type="text" name="rolename">';
     echo '<div class="row">';
-    //foreach($the_plugs as $key => $value) {
+    
     foreach($menu as $key => $value) {
-        //$string = explode('/',$value);
-        //print_r($value);
+    
         if($value[0] === ''){
             continue;
         }
@@ -95,15 +92,16 @@ function list_all_active_plugins(){
         if(isset($submenu[$value[2]])){
             echo '<input type="checkbox" name="slugs[]" value = "'. array_values($submenu[$value[2]])[0][2].'"/>';
         }else{
-            echo '<input type="checkbox" name="slugs[]" value = "'. esc_html($value[2]) .'"/>';
+            echo '<input type="checkbox" name="slugs[]" value = "'. $value[2] .'"/>';
         }
-        echo '<label  class="single-active-plugin-label" for="' .$value[0].'">'. $value[0] .' </label>';
+        
+        echo '<label  class="single-active-plugin-label">'. wurc_remove_numbers($value[0]) .' </label>';
         if(isset($submenu[$value[2]])){
             foreach($submenu[$value[2]] as $sm){    
                 echo '<div class="sub-menu-checkboxes">';
                 
-                echo '<input type="checkbox" name="slugs[]" value = "'. urlize($sm[2]).'"/>';
-                echo '<label  class="single-active-plugin-label" for="' . $sm[0].'">'. $sm[0].' </label>';
+                echo '<input type="checkbox" name="slugs[]" value = "'. wurc_urlize($sm[2]).'"/>';
+                echo '<label  class="single-active-plugin-label">'. wurc_remove_numbers($sm[0]).' </label>';
                 echo '</div>';
             }
         }
@@ -126,7 +124,8 @@ function list_all_active_plugins(){
 //     return false;
 // }
 
-function list_all_menu_items(){
+//Lists all currently Avaliable menus (FOR DEBUGING)
+function wurc_list_all_menu_items(){
     
         
     global $submenu, $menu, $pagenow;
@@ -134,7 +133,7 @@ function list_all_menu_items(){
     print_r($menu);
     foreach($menu as $key=>$value){
         if(isset($value[0]) && $value[0] != ''){
-        echo '<h1>'. $key .", ". $value[0] .", ". urlize($value[2]) . '</h1> </br>';
+        echo '<h1>'. $key .", ". $value[0] .", ". wurc_urlize($value[2]) . '</h1> </br>';
         
         // foreach($value as $k=>$val){
             
@@ -157,16 +156,8 @@ function list_all_menu_items(){
        
 }
 
-function urlize($slug){
-    if($slug == "woocommerce"){
-        $slug = "wc-admin";
-    }
-    if(strpos($slug, ".php") === FALSE){
-        $slug = 'page=' . $slug;
-    }
-    return $slug;
-}
 
+// Adds styles to the plugin page
 add_action('wurc_page_styles', 'call_wurc_page_styles');
 
 function call_wurc_page_styles(){
@@ -220,7 +211,7 @@ function call_wurc_page_styles(){
     </style>';
 }
 
-function js_scripts(){
+function wurc_js_scripts(){
     echo'
     <script>
         
@@ -228,11 +219,14 @@ function js_scripts(){
     ';
 }
 
+
 // Checks whether or not role can access curent page
-add_action('init', 'check_role_access');
-function check_role_access(){
-    
-    if(wp_get_current_user()->roles[0] == "administrator"){
+add_action('init', 'wurc_check_role_access');
+function wurc_check_role_access(){
+    if(!is_user_logged_in()){
+        return 0;
+    }
+    if(in_array("administrator", wp_get_current_user()->roles)){
         return 0;
     }
     $uri = wp_parse_url($_SERVER['REQUEST_URI']);
@@ -243,16 +237,16 @@ function check_role_access(){
 
     
 
-    print_r($uri);
+    
     $can_access = array();
     foreach($allcaps as $key=>$value){
         if(strpos($key,constant("ROLE_CAP_PREFIX")) !== FALSE){
             
-            array_push($can_access, substr($key, strlen(constant("ROLE_CAP_PREFIX")), strlen($key   )));
+            array_push($can_access, substr($key, strlen(constant("ROLE_CAP_PREFIX")), strlen($key)));
 
         }
     }
-    print_r($can_access);
+  
 
 
     
@@ -268,6 +262,58 @@ function check_role_access(){
         }
     }
 }
-    //$match = (!empty($path) ? $object->findMatch($path, $params) : false);
+    
 }
 
+
+// Remove menus user role has no access to 
+add_action('admin_menu', 'wurc_remove_unwanted_menu');
+function wurc_remove_unwanted_menu(){
+    global $menu, $submenu;
+
+    if(!is_user_logged_in()){
+        return 0;
+    }
+    if(in_array("administrator", wp_get_current_user()->roles)){
+        return 0;
+    }
+    
+    $allcaps = wp_get_current_user()->allcaps;
+    
+
+    
+
+    
+    $can_access = array();
+    foreach($allcaps as $key=>$value){
+        if(strpos($key,constant("ROLE_CAP_PREFIX")) !== FALSE){
+        
+            array_push($can_access, substr($key, strlen(constant("ROLE_CAP_PREFIX")), strlen($key)));
+
+        }
+    }
+  
+    foreach($menu as $menu_item){
+        if(!in_array($menu_item[2],$can_access)){
+            remove_menu_page($menu_item[2]);
+        }
+    }
+}
+
+
+function wurc_urlize($slug){
+    if($slug == "woocommerce"){
+        $slug = "wc-admin";
+    }
+    if(strpos($slug, ".php") === FALSE){
+        $slug = 'page=' . $slug;
+    }
+    return $slug;
+}
+
+
+function wurc_remove_numbers($string){
+
+    return preg_replace('/[0-9]+/', '', $string);
+
+}
