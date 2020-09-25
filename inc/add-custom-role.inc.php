@@ -6,23 +6,21 @@ if(isset($_POST['add-new-role-submit'])){
     $role_slug = slugify($_POST['rolename']);
     $role_name = $_POST['rolename'];
     $plugin_slugs = (array) $_POST['slugs'];
+    $plugin_permissions = (array) $_POST['permission'];
     print_r( (array) $_POST['slugs']);
     if(!role_exists($role_name, $role_slug)){
         
     
     $editor = get_role('editor');
     $capabilities = $editor->capabilities;
-        
+    $capabilities['level_1'] = true;
     foreach($plugin_slugs as $slug){
         $capabilities[constant("ROLE_CAP_PREFIX") . $slug] = true;
     }
-    unset($capabilities['activate_plugins']);
-    unset($capabilities['edit_plugins']);
-    unset($capabilities['install_plugins']);
-    unset($capabilities['edit_users']);
-    unset($capabilities['manage_options']);
-    unset($capabilities['delete_users']);
-    unset($capabilities['create_users']);
+
+    foreach($plugin_permissions as $permission){
+        $capabilities[$permission] = true;
+    }
     print_r($capabilities);
     add_role(
         $role_slug,
@@ -38,8 +36,7 @@ else{
     header("Location: ".$_SERVER['HTTP_REFERER'].'&resp=roleexicst');
     exit();
 }
-    // remove_role('kinda-admin');
-    // remove_role('prosta-roli');
+  
 }
 
 
