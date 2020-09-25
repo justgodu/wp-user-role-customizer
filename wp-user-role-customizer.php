@@ -239,6 +239,7 @@ function wurc_check_role_access(){
 
     
     $can_access = array();
+    
     foreach($allcaps as $key=>$value){
         if(strpos($key,constant("ROLE_CAP_PREFIX")) !== FALSE){
             
@@ -252,15 +253,19 @@ function wurc_check_role_access(){
     
     $path  = (isset($uri['path']) ? $uri['path'] : null);
     $query = (isset($uri['query']) ? $uri['query'] : null);
-    
+    $count = 0;
     if( strpos($path,'.php') !== FALSE || $query !== null){
         foreach($can_access as $menu_slug){
-        
-        if(strpos($query, $menu_slug) ===FALSE && strpos($path,$menu_slug) ===FALSE && strpos($path,'about.php') === FALSE){
-            echo 'query: '.strpos($query, $menu_slug) . ' path: ' . strpos($path,$menu_slug) . ' about: ' . strpos($path,'about.php'). ' ' .$query.' '.$path .' '.  $menu_slug;
-            wp_die('You Cannot Access This Page', 'Access Denied',);
-        }
+            if(strpos($query, $menu_slug) === FALSE && strpos($path,$menu_slug) === FALSE && strpos($path,'about.php') === FALSE){
+              //  echo 'query: '.strpos($query, $menu_slug) . ' path: ' . strpos($path,$menu_slug) . ' about: ' . strpos($path,'about.php'). ' query: ' .$query.' path: '.$path .' menuslug: '.  $menu_slug;
+                
+            }else {
+                $count++;
+            }
     }
+        if($count === 0){
+            wp_die('You Cannot Access This Page', 'Access Denied',['exit'=> true]);
+        }
 }
     
 }
@@ -281,8 +286,12 @@ function wurc_remove_unwanted_menu(){
     $allcaps = wp_get_current_user()->allcaps;
     
 
-    
-
+    // echo '<h1> All Caps </h1>';
+    // print_r($allcaps);
+    // echo '<h1> All menu </h1>';
+    // print_r($menu);
+    // echo '<h1> All submenu </h1>';
+    // print_r($submenu);
     
     $can_access = array();
     foreach($allcaps as $key=>$value){
@@ -296,8 +305,17 @@ function wurc_remove_unwanted_menu(){
     foreach($menu as $menu_item){
         if(!in_array($menu_item[2],$can_access)){
             remove_menu_page($menu_item[2]);
+            continue;
+        }
+        foreach($submenu as $submenu_parent){
+            foreach($submenu_parent as $submenu_item)
+            if(!in_array($submenu_item[2],$can_access)){
+                remove_submenu_page($menu_item[2],$submenu_item[2]);
+            }
         }
     }
+    
+    
 }
 
 
