@@ -1,3 +1,9 @@
+## Version 0.0.3
+
+It works much better now.
+
+Fixed some bugs.
+
 ## Version 0.0.2
 
 Now removes menu items which user role has no access to.

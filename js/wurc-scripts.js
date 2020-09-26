@@ -1,3 +1,11 @@
+function clearInp() {
+  document.getElementsByTagName("input").value = "";
+}
+
+function onLoad() {
+  clearInp();
+}
+
 function handleChange(checkbox, value) {
   var hiddens = document.getElementById("hiddeninput");
   if (checkbox.checked == true) {

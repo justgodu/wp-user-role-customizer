@@ -1,19 +1,26 @@
 <?php
 require_once("../../../../wp-load.php");
-//define("ROLE_CAP_PREFIX", 'plugin_access_');
 
-if(isset($_POST['add-new-role-submit'])){
+
+if(isset($_POST['add-new-role-submit']) && isset($_POST['rolename']) &&  isset($_POST['slugs'])  &&  isset($_POST['permission']) &&  isset($_POST['preroles'])){
     $role_slug = slugify($_POST['rolename']);
     $role_name = $_POST['rolename'];
     $plugin_slugs = (array) $_POST['slugs'];
     $plugin_permissions = (array) $_POST['permission'];
-    print_r( (array) $_POST['slugs']);
+    
+
+    if(isset($_POST['preroles']) & $_POST['preroles'] !== "wurc-no-role-inherited" && is_string($_POST['preroles'])){
+    
+    $prerole = get_role($_POST['preroles']);
+    $capabilities = $prerole->capabilities;
+    }
     if(!role_exists($role_name, $role_slug)){
         
     
-    $editor = get_role('editor');
-    $capabilities = $editor->capabilities;
-    $capabilities['level_1'] = true;
+    
+    $capabilities['manage_woocommerce'] = true;
+    $capabilities['view_woocommerce_reports'] = true;
+    $capabilities['level_0'] = true;
     foreach($plugin_slugs as $slug){
         $capabilities[constant("ROLE_CAP_PREFIX") . $slug] = true;
     }
@@ -21,19 +28,20 @@ if(isset($_POST['add-new-role-submit'])){
     foreach($plugin_permissions as $permission){
         $capabilities[$permission] = true;
     }
-    print_r($capabilities);
+    
     add_role(
         $role_slug,
         $role_name,
         $capabilities
     );
-
-    header("Location: ".$_SERVER['HTTP_REFERER'].'&resp=success');
+    wp_redirect($_SERVER['HTTP_REFERER'].'&resp=success');
+    
     exit();
 }
 else{
     echo '<h1>role exists</h1>';
-    header("Location: ".$_SERVER['HTTP_REFERER'].'&resp=roleexicst');
+    wp_redirect($_SERVER['HTTP_REFERER'].'&resp=roleexicst');
+    
     exit();
 }
   

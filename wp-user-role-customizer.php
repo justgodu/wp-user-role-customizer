@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       WP User Role Customizer  
  * Description:       Create some custom roles for your wordpress website
- * Version:           0.0.2
+ * Version:           0.0.3
  * Requires at least: 5.2
  * Requires PHP:      7.2
  * Author:            Nika Goduadze
@@ -76,10 +76,20 @@ function wurc_plugin_page_role_creator(){
     }
     global $submenu, $menu;
     
+    $roles = wurc_get_editable_roles();
     
-    echo '<form class="list-of-active-plugins" action = "'. plugins_url( '/inc/add-custom-role.inc.php', __FILE__ ).'" method=post> ';
+    echo '<form onload="onLoad();" name="add-role" class="list-of-active-plugins" action = "'. plugins_url( '/inc/add-custom-role.inc.php', __FILE__ ).'" method=post> ';
     echo '<label class="" for="rolename">New role name: </label>';
     echo '<input class="role-name-input" type="text" name="rolename">';
+    echo '<label for="preroles">Inherit permissions from: </label>';
+    echo '<select name="preroles">';
+        echo '<option value="wurc-no-role-inherited">No role</option>';
+        foreach($roles as $role_slug => $role){
+            
+         echo '<option value ="'.$role_slug.'">'.$role['name'].'</option>';
+        }
+    
+    echo '</select>';
     echo '<div class="row">';
     
     foreach($menu as $key => $value) {
@@ -91,16 +101,14 @@ function wurc_plugin_page_role_creator(){
         echo '<div class="menu-checkboxes col-md-3 card dropdown">';
         
         if(isset($submenu[$value[2]])){
-            // echo '<input type="checkbox" onClick="handleChange(this,\''.array_values($submenu[$value[2]])[0][1].' \');"  name="slugs[]" value = "'. array_values($submenu[$value[2]])[0][2].'"/>';
-           // echo '<input name="permission[]" type="hidden" value = "'. array_values($submenu[$value[2]])[0][1] .'"/>';
-        //    echo '<label  class="single-active-plugin-label">'. wurc_remove_numbers($value[0]) .' </label>';
+           
            echo '<button class="btn btn-secondary dropdown-toggle" type="button" id="dropdownMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
            '. wurc_remove_numbers($value[0]) .'
       </button>';
         }else{
             echo '<input  type="checkbox" onClick="handleChange(this,\''. $value[1] .'\' );"  name="slugs[]" value = "'. $value[2] .'"/>';
             echo '<label  class="single-active-plugin-label">'. wurc_remove_numbers($value[0]) .' </label>';
-           // echo '<input name="permission[]" type="hidden" value = "'. $value[1] .'"/>';
+           
         }
         
         
@@ -111,7 +119,7 @@ function wurc_plugin_page_role_creator(){
                 echo '<div class="sub-menu-checkboxes dropdown-item">';
                 
                 echo '<input type="checkbox" onClick="handleChange(this,\''. $sm[1] .'\');"  name="slugs[]" value = "'. wurc_urlize($sm[2]).'"/>';
-               // echo '<input name="permission[]" type="hidden" value = "'. $sm[1] .'"/>';
+               
                 echo '<label  class="single-active-plugin-label">'. wurc_remove_numbers($sm[0]).' </label>';
                 echo '</div>';
             }
@@ -120,19 +128,23 @@ function wurc_plugin_page_role_creator(){
         echo '</div>';
     }
     echo '</div>';
-    echo '<div id="hiddeninput" style="displa:none;">';
+    echo '<div id="hiddeninput" style="display:none;">';
     echo '</div>';
     echo '<button class="btn btn-primary wurc-submit-button" type="submit" name="add-new-role-submit">Add Role</button>'; 
     echo '</from>';
+
+
     do_action('after_wurc_page_form');
     
 }
+
 //Lists all currently Avaliable menus (FOR DEBUGING)
+// add_action('after_wurc_page_form', 'wurc_list_all_menu_items');
 function wurc_list_all_menu_items(){
     
         
     global $submenu, $menu, $pagenow;
-    echo '<h1> IDK </h1>';
+    
     print_r($menu);
     foreach($menu as $key=>$value){
         if(isset($value[0]) && $value[0] != ''){
@@ -187,10 +199,13 @@ function call_wurc_page_styles(){
         }
         .wurc-submit-button{
             max-width: 200px;
+            margin: 10px;
             
         }
     </style>';
 }
+
+//Include scripts on plugin page
 add_action('after_wurc_page_form', 'wurc_inner_scipts');
 function wurc_inner_scipts(){
     echo'
@@ -206,7 +221,7 @@ function wurc_inner_scipts(){
 
 function wurc_js_scripts() {
     
-    wp_enqueue_script( 'wurc-scripts', plugins_url( '/js/wurc-scripts.js', __FILE__ ));
+  //  wp_enqueue_script( 'wurc-scripts', plugins_url( '/js/wurc-scripts.js', __FILE__ ));
 }
 
 
@@ -219,103 +234,125 @@ function wurc_js_scripts() {
 // Checks whether or not role can access curent page
 add_action('init', 'wurc_check_role_access');
 function wurc_check_role_access(){
+    // Make sure user is logged in
     if(!is_user_logged_in()){
         return 0;
     }
+    //Make sure its not admin
     if(in_array("administrator", wp_get_current_user()->roles)){
         return 0;
     }
-    $uri = wp_parse_url($_SERVER['REQUEST_URI']);
+    
+    
+    //Get capabilities
     $allcaps = wp_get_current_user()->allcaps;
-    if (isset($uri['query'])) {
-        parse_str($uri['query'], $params);
-    }
-
-    
-
-    
     $can_access = array();
-    
+    //Get manu slugs user can access from capabilities
     foreach($allcaps as $key=>$value){
         if(strpos($key,constant("ROLE_CAP_PREFIX")) !== FALSE){
-            
+            //Remove ROLE_CAP_PREFIX from capability name to get menu-slug
             array_push($can_access, substr($key, strlen(constant("ROLE_CAP_PREFIX")), strlen($key)));
 
         }
     }
+    
   
 
-    
-    
+    //Get path and query of requested page
+    $uri = wp_parse_url($_SERVER['REQUEST_URI']);
     $path  = (isset($uri['path']) ? $uri['path'] : null);
     $query = (isset($uri['query']) ? $uri['query'] : null);
-    $count = 0;
-    if(strpos($path, '/wp-admin/about.php') !== FALSE){
+    $user_can_access = FALSE;
+    //Make sure its wp-admin page
+    if(strpos($path, 'wp-admin') !== FALSE){
+    //Redirect to dashboard if requested page is either about.php or index.php
+    if(strpos($path, '/wp-admin/about.php') !== FALSE || strpos($path, '/wp-admin/index.php') !== FALSE){
         wp_redirect(get_dashboard_url());
         exit();
     }
+    
     if( strpos($path,'.php') !== FALSE || $query !== null){
         foreach($can_access as $menu_slug){
-            if(strpos($path.'?'.$query,$menu_slug) !== FALSE || strpos($path,$menu_slug) !== FALSE){
-                $count++;
+            //Access page if user can access requested page
+            if(strpos('?'.$query .' ',$menu_slug. ' ') !== FALSE || strpos($path, '/' .$menu_slug) !== FALSE || strpos($path.'?'.$query .' ',$menu_slug. ' ') !== FALSE){
+                $user_can_access = TRUE;
             break;
                 
         }
     }
-        if($count === 0){
+        //Exit if user can't access requested page
+        if($user_can_access === FALSE){
             wp_die('You Cannot Access This Page', 'Access Denied',['exit'=> true]);
         }
 }
-
+    }
     
 }
 
+// add_action('admin_menu', 'wurc_debbug_admin_menu');
+// Debuggin
+function wurc_debbug_admin_menu(){
+    if(in_array("administrator", wp_get_current_user()->roles)){
+        return 0;
+    }
+    
+    $allcaps = wp_get_current_user()->allcaps;
+    print_r($allcaps);
+}
 
 // Remove menus user role has no access to 
 add_action('admin_menu', 'wurc_remove_unwanted_menu');
 function wurc_remove_unwanted_menu(){
     global $menu, $submenu;
-
+    // Check if user logged in
     if(!is_user_logged_in()){
         return 0;
     }
+    // Make sure its not admin
     if(in_array("administrator", wp_get_current_user()->roles)){
         return 0;
     }
-    
+    // Get every capability of current user
     $allcaps = wp_get_current_user()->allcaps;
     
 
-    
-    
-    
+    // Get every access added from plugin
     $can_access = array();
     foreach($allcaps as $key=>$value){
         if(strpos($key,constant("ROLE_CAP_PREFIX")) !== FALSE){
-        
+          
             array_push($can_access, substr($key, strlen(constant("ROLE_CAP_PREFIX")), strlen($key)));
-
+            
         }
+      
     }
+
+    // Go through every menu and submenu and remove if user has no access to it
     foreach($menu as $menu_item){
-         
-   
-        
-        if(!in_array($menu_item[2],$can_access)){
-            remove_menu_page($menu_item[2]);
+        //Make sure its not separator
+        if(strpos($menu_item[2], 'separator') !== FALSE){
             continue;
         }
-        foreach($submenu as $submenu_parent){
-            foreach($submenu_parent as $submenu_item)
-            
+        //Go trough ever submenu of menu
+        foreach($submenu[$menu_item[2]] as $submenu_item){
+            //Remove submenu if user has no access to it else leave it and add menu to accessable menus
             if(!in_array($submenu_item[2],$can_access)){
+                
                 remove_submenu_page($menu_item[2],$submenu_item[2]);
-            }
-        }
+            }else{
+                //
+                array_push($can_access,$menu_item[2]);
+            }  
+    }
+    // Remove menus user has no access to
+    if(!in_array($menu_item[2],$can_access)){
+            
+        remove_menu_page($menu_item[2]);
+        continue;
+    }
     }
 }
-
-
+// Fixes url to use it properly
 function wurc_urlize($slug){
     if($slug == "woocommerce"){
         $slug = "wc-admin";
@@ -326,9 +363,18 @@ function wurc_urlize($slug){
     return $slug;
 }
 
-
+// Removes numbers from strings 
 function wurc_remove_numbers($string){
 
     return preg_replace('/[0-9]+/', '', $string);
 
+}
+//Gets every  currently available roles
+function wurc_get_editable_roles() {
+    global $wp_roles;
+
+    $all_roles = $wp_roles->roles;
+    $editable_roles = apply_filters('editable_roles', $all_roles);
+
+    return $editable_roles;
 }
