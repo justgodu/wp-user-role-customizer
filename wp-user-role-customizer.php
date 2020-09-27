@@ -138,25 +138,11 @@ function wurc_plugin_page_role_creator(){
     
 }
 
-//Lists all currently Avaliable menus (FOR DEBUGING)
-// add_action('after_wurc_page_form', 'wurc_list_all_menu_items');
-function wurc_list_all_menu_items(){
-    
-        
-    global $submenu, $menu, $pagenow;
-    
-    print_r($menu);
-    foreach($menu as $key=>$value){
-        if(isset($value[0]) && $value[0] != ''){
-        echo '<h1>'. $key .", ". $value[0] .", ". wurc_urlize($value[2]) . '</h1> </br>';
-        echo '<h3>' . print_r($submenu[$value[2]]) . '</h3>'; 
-    }
-    }
+
      
             
 
        
-}
 // Adds styles to the plugin page
 add_action('wurc_page_styles', 'call_wurc_page_styles');
 
@@ -278,8 +264,6 @@ function wurc_check_role_access(){
                 $user_can_access = TRUE;
             break;
                 
-        }else{
-            echo 'path ' .$path . ' query: '. $query. ' menu_slug: '. $menu_slug .' </br>';
         }
     }
         //Exit if user can't access requested page
@@ -291,16 +275,7 @@ function wurc_check_role_access(){
     
 }
 
-// add_action('admin_menu', 'wurc_debbug_admin_menu');
-// Debuggin
-function wurc_debbug_admin_menu(){
-    if(in_array("administrator", wp_get_current_user()->roles)){
-        return 0;
-    }
-    
-    $allcaps = wp_get_current_user()->allcaps;
-    print_r($allcaps);
-}
+
 
 // Remove menus user role has no access to 
 add_action('admin_menu', 'wurc_remove_unwanted_menu',9);
