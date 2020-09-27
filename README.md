@@ -1,3 +1,7 @@
+## Version 0.0.4
+
+Fixed some bugs.
+
 ## Version 0.0.3
 
 It works much better now.

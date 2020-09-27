@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       WP User Role Customizer  
  * Description:       Create some custom roles for your wordpress website
- * Version:           0.0.3
+ * Version:           0.0.4
  * Requires at least: 5.2
  * Requires PHP:      7.2
  * Author:            Nika Goduadze
@@ -118,7 +118,7 @@ function wurc_plugin_page_role_creator(){
             foreach($submenu[$value[2]] as $sm){    
                 echo '<div class="sub-menu-checkboxes dropdown-item">';
                 
-                echo '<input type="checkbox" onClick="handleChange(this,\''. $sm[1] .'\');"  name="slugs[]" value = "'. wurc_urlize($sm[2]).'"/>';
+                echo '<input type="checkbox" onClick="handleChange(this,\''. $sm[1] .'\');"  name="slugs[]" value = "'. $sm[2].'"/>';
                
                 echo '<label  class="single-active-plugin-label">'. wurc_remove_numbers($sm[0]).' </label>';
                 echo '</div>';
@@ -274,10 +274,12 @@ function wurc_check_role_access(){
     if( strpos($path,'.php') !== FALSE || $query !== null){
         foreach($can_access as $menu_slug){
             //Access page if user can access requested page
-            if(strpos('?'.$query .' ',$menu_slug. ' ') !== FALSE || strpos($path, '/' .$menu_slug) !== FALSE || strpos($path.'?'.$query .' ',$menu_slug. ' ') !== FALSE){
+            if(wurc_check_for_url_access($path,$query,$menu_slug)){
                 $user_can_access = TRUE;
             break;
                 
+        }else{
+            echo 'path ' .$path . ' query: '. $query. ' menu_slug: '. $menu_slug .' </br>';
         }
     }
         //Exit if user can't access requested page
@@ -301,7 +303,7 @@ function wurc_debbug_admin_menu(){
 }
 
 // Remove menus user role has no access to 
-add_action('admin_menu', 'wurc_remove_unwanted_menu');
+add_action('admin_menu', 'wurc_remove_unwanted_menu',9);
 function wurc_remove_unwanted_menu(){
     global $menu, $submenu;
     // Check if user logged in
@@ -333,14 +335,27 @@ function wurc_remove_unwanted_menu(){
         if(strpos($menu_item[2], 'separator') !== FALSE){
             continue;
         }
+        //Check if submenu exists
+        if(!isset($submenu[$menu_item[2]])){
+            continue;
+        }
+        
         //Go trough ever submenu of menu
         foreach($submenu[$menu_item[2]] as $submenu_item){
+            $isaccessable = false;
+            foreach($can_access as $access_slug){
+                if(esc_html($submenu_item[2]) == esc_html($access_slug)){
+                    $isaccessable = true;
+                    break;
+                }
+               
+            }
             //Remove submenu if user has no access to it else leave it and add menu to accessable menus
-            if(!in_array($submenu_item[2],$can_access)){
+            if(!$isaccessable){
                 
                 remove_submenu_page($menu_item[2],$submenu_item[2]);
             }else{
-                //
+                
                 array_push($can_access,$menu_item[2]);
             }  
     }
@@ -358,7 +373,7 @@ function wurc_urlize($slug){
         $slug = "wc-admin";
     }
     if(strpos($slug, ".php") === FALSE){
-        $slug = 'page=' . $slug;
+        // $slug = 'page=' . $slug;
     }
     return $slug;
 }
@@ -377,4 +392,12 @@ function wurc_get_editable_roles() {
     $editable_roles = apply_filters('editable_roles', $all_roles);
 
     return $editable_roles;
+}
+
+// Check similarities between url and menu slug
+function wurc_check_for_url_access($path,$query,$menu_slug){
+    if(strpos('?'.$query .' ',$menu_slug. ' ') !== FALSE || strpos($path, '/' .$menu_slug) !== FALSE || strpos($path.'?'.$query .' ',$menu_slug. ' ') !== FALSE || strpos($query,$menu_slug) !== FALSE){
+        return true;
+    }
+    return false;
 }
