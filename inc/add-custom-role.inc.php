@@ -17,9 +17,7 @@ if(isset($_POST['add-new-role-submit']) && isset($_POST['rolename']) &&  isset($
     if(!role_exists($role_name, $role_slug)){
         
     
-    
-    $capabilities['manage_woocommerce'] = true;
-    $capabilities['view_woocommerce_reports'] = true;
+
     $capabilities['level_0'] = true;
     foreach($plugin_slugs as $slug){
         $capabilities[constant("ROLE_CAP_PREFIX") . $slug] = true;

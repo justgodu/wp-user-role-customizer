@@ -215,8 +215,6 @@ function wurc_js_scripts() {
 
 
 
-
-
 // Checks whether or not role can access curent page
 add_action('init', 'wurc_check_role_access');
 function wurc_check_role_access(){
@@ -241,6 +239,8 @@ function wurc_check_role_access(){
 
         }
     }
+   
+    // array_push($can_access, 'post.php');
     
   
 
@@ -278,7 +278,8 @@ function wurc_check_role_access(){
 
 
 // Remove menus user role has no access to 
-add_action('admin_menu', 'wurc_remove_unwanted_menu',9);
+add_action('admin_menu', 'wurc_remove_unwanted_menu');
+add_action('admin_init', 'wurc_remove_unwanted_menu');
 function wurc_remove_unwanted_menu(){
     global $menu, $submenu;
     // Check if user logged in
