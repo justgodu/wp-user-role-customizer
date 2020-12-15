@@ -1,3 +1,8 @@
+## Version 0.0.5
+
+Implemented OOP version.
+Added uninstall.php
+
 ## Version 0.0.4
 
 Fixed some bugs.

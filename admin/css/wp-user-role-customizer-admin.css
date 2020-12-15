@@ -1,0 +1,42 @@
+/**
+ * All of the CSS for your admin-specific functionality should be
+ * included in this file.
+ */
+.list-of-active-plugins{
+    display: flex;
+    flex-direction: column;
+}
+.role-name-input{
+    max-width: 120px;
+}
+.single-active-plugin-label{
+    font-size: 15px;
+    color: black;
+    weight: bold;
+    display: inline-block;
+}
+
+.menu-checkboxes{
+    display:block;
+    margin-top: 10px;
+}
+.sub-menu-checkboxes{
+    display:block;
+    margin-top: 10px;
+    margin-left: 10px;
+
+}
+label::first-letter {
+    text-transform: uppercase;
+}
+.wurc-success{
+    color: green;
+}
+.wurc-fail{
+    color: red;
+}
+.wurc-submit-button{
+    max-width: 200px;
+    margin: 10px;
+
+}
